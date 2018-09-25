@@ -1,0 +1,12 @@
+Makefile
+build/*
+.DS_Store
+*.eep
+*.elf
+*.lss
+*.lst
+*.map
+*.sym
+*.xcodeproj
+*.hex
+*.o
