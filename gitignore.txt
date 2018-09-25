@@ -1,6 +1,5 @@
 Makefile
 build/*
-.DS_Store
 *.eep
 *.elf
 *.lss
@@ -10,4 +9,3 @@ build/*
 *.xcodeproj
 *.hex
 *.o
-Source/*
