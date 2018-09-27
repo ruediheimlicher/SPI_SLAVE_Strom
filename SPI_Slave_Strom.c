@@ -563,10 +563,15 @@ int main (void)
                         // impulsmittelwert*= 3;
                         impulsmittelwert/= 4;
                      }
-                     leistung =(uint32_t) 360.0/impulsmittelwert*10000.0;// 480us
+                  //   leistung =(uint32_t) 360.0/impulsmittelwert*10000.0;// 480us
+                     
+                     // 1000 imp == 1 kWh
+                     // 1 imp = 1 wh = 3600 ws
+                     leistung =(uint32_t) 1.0/impulsmittelwert*10000.0;// 480us
                      
                      // webleistung = (uint32_t)360.0/impulsmittelwert*1000000.0;
-                     webleistung = (uint32_t)360.0/impulsmittelwert*10000.0;
+                     //webleistung = (uint32_t)360.0/impulsmittelwert*10000.0;
+                     webleistung = (uint32_t)1.0/impulsmittelwert*10000.0;
                      
                      lcd_gotoxy(0,1);
                      lcd_putc('L');
