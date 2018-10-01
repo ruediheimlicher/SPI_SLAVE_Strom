@@ -400,8 +400,6 @@ void lcd_gotoxy(uint8_t x, uint8_t y)
          lcd_load_byte((1<<LCD_DDRAM)+LCD_START_LINE4+x);
          lcd_send_cmd();
          break;
-         
-         
    }//switch
    
    

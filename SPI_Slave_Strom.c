@@ -231,7 +231,7 @@ void timer0 (void)
 	
 }
 
-void timer1(void) // Instrument
+void timer1(void) // Instrument-Anzeige PWM
 {
    TCCR1A |= (1<<COM1A1);
    //TCCR1A |= (1<<COM1B1);
@@ -470,11 +470,12 @@ int main (void)
       if (loopcount0==0x8F00)
       {
          loopcount0=0;
-         LOOPLEDPORT ^=(1<<LOOPLED);
+        // LOOPLEDPORT ^=(1<<LOOPLED);
          //delay_ms(10);
          loopcount1++;
-         if ((loopcount1 & 0x0F)==0)
+         if ((loopcount1 & 0x0A)==0)
          {
+            LOOPLEDPORT ^=(1<<LOOPLED);
             uint8_t t=sekunde & 0x0FF;
             //lcd_gotoxy(16,0);
             //lcd_putint(t);
@@ -568,11 +569,11 @@ int main (void)
                      
                      // 1000 imp == 1 kWh
                      // 1 imp = 1 wh = 1000 mWh
-                     leistung =(uint32_t) 1.0/impulsmittelwert*10.0;// 480us
+                     leistung =(uint32_t) 1000.0/impulsmittelwert*10000.0;// 480us
                      
                      // webleistung = (uint32_t)360.0/impulsmittelwert*1000000.0;
                      //webleistung = (uint32_t)360.0/impulsmittelwert*10000.0;
-                     webleistung = (uint32_t)1.0/impulsmittelwert*10.0;
+                     webleistung = (uint32_t)1000.0/impulsmittelwert*10000.0;
                      
                      lcd_gotoxy(0,1);
                      lcd_putc('L');
@@ -592,6 +593,7 @@ int main (void)
                      lcd_gotoxy(2,1);
                      lcd_puts("    ");
                      lcd_gotoxy(6-l,1);
+                     //lcd_putint16(leistung);
                      lcd_puts(trimwhitespace(defstromstring));
                      lcd_putc('W');
                      
@@ -723,19 +725,7 @@ int main (void)
             lcd_gotoxy(19,0);
             // lcd_putc(' ');
             
-            // in lcd verschoben
-            //lcd_clr_line(2);
-            
-            
-            // outbuffer[0]=0;
-            // outbuffer[1]=0;
-            // outbuffer[2]=0;
-            
-            // Ausgang anzeigen
-            // outbuffer[0] = testwert;
-            // outbuffer[1] = testwert;
-            // outbuffer[2] = testwert;
-            
+               
             
             testwert++;
             if (TEST)

@@ -157,12 +157,14 @@ void timer2(void) // Takt fuer Strommessung
    
    if(F_CPU == 8000000)
    {
-      TCCR2B |= (1<<CS20);    // kein Teiler
+     TCCR2B |= (1<<CS20);    // kein Teiler
+    //TCCR2B |= (1<<CS20) | (1<<CS21) | (1<<CS22);
    }
    else
    {
       TCCR2B |= (1<<CS21);    // Teiler 8
    }
+   
    TCCR2B |= (1<<WGM22);   // ***
 	
    
@@ -220,7 +222,7 @@ ISR(TIMER2_COMPA_vect) // CTC Timer2
 
 #pragma mark ISR INT1
 
-ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 360 mWh
+ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  (vorher 360 mWh)
 {
    //OSZILO;
    stromimpulscounter++; // Anzahl Impulse der laufenden Messung
