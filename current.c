@@ -34,7 +34,7 @@ volatile uint8_t                    sendWebCount=0;	// Zahler fuer Anzahl TWI-Ev
 volatile uint16_t messungcounter;
 
 
-#define TEST   1
+#define TEST   0
 
 #include <avr/io.h>
 #include "lcd.h"
