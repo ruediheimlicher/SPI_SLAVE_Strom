@@ -95,6 +95,17 @@ static volatile uint8_t						startbitpos=0;
 //
 
 // OSZI
+#ifndef OSZIAPORT
+#define OSZIAPORT PORTD
+#endif
+#ifndef OSZIADDR
+#define OSZIADDR DDRD
+#endif
+#ifndef PULSA
+#define PULSA 6
+#endif
+
+
 #ifndef OSZIALO
 #define OSZIALO OSZIAPORT &= ~(1<<PULSA)
 #endif
@@ -223,8 +234,8 @@ void InitSPI_Slave(void)
 	SPI_INT0_DDR &= ~(1<<SPI_CONTROL_SCK);				// INT0 als SCK Eingang
 	SPI_INT0_PORT |=(1<<SPI_CONTROL_SCK);				// HI
    
-   OSZIPORTDDR |=(1<<PULS);
-   OSZIPORT |= (1<<PULS);
+   OSZIADDR |=(1<<PULSA);
+   OSZIAPORT |= (1<<PULSA);
 
 	
 //	PCICR |= (1<<PCIE0);

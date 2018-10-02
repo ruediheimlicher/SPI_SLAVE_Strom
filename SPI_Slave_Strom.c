@@ -64,8 +64,7 @@
 #define TASTATURPORT PORTC
 
 #define TASTATURPIN        3
-#define POTPIN             0
-#define BUZZERPIN          0
+
 #define ECHOPIN            5           //	Ausgang fuer Impulsanzeige
 
 //#define buffer_size        8
@@ -112,27 +111,29 @@ static char stromstring[10];
 
 #define SPI_SENDBIT				0
 
-#define TCR1A_SET  TCCR1B |= (1<<CS10)
-#define TCR1A_STOP  TCCR1B &= ~(1<<CS10)
+
+/*
+ CS12   CS11   CS10   Description
+ 0    0     0     No clock source
+ 0    0     1     clk/1
+ 0    1     0     clk/8
+ 0    1     1     clk/32
+ 1    0     0     clk/64
+ 1    0     1     clk/128
+ 1    1     0     clk/256
+ 1    1     1     clk/1024
+ */
+
+
+#define TIMER1_CLOCK          (1<<CS10)
+
+#define TCR1A_SET  TCCR1B |= TIMER1_CLOCK
+#define TCR1A_STOP  TCCR1B &= ~(1<<0x07) // clear CS10/11/12
 
 void delay_ms(unsigned int ms);
 
-uint8_t OG1status=0x00;
 
 
-void RingD2(uint8_t anz)
-{
-	uint8_t k=0;
-	for (k=0;k<2*anz;k++)
-	{
-		PORTD |=(1<<BUZZERPIN);
-		_delay_ms(2);
-		PORTD &=~(1<<BUZZERPIN);
-		_delay_ms(2);
-		
-	}
-	PORTD &=~(1<<BUZZERPIN);
-}
 
 
 uint8_t Tastenwahl(uint8_t Tastaturwert)
@@ -169,7 +170,7 @@ return -1;
 
 void SPI_slaveinit(void)
 {
-	
+   OSZICDDR |= (1<<PULSC);
    // LED
    LOOPLEDDDR |=(1<<LOOPLED);
 	//LCD
@@ -195,7 +196,7 @@ void SPI_slaveinit(void)
 	DDRC &= ~(1<<DDC2);	//Pin 2 von PORT C als Eingang fuer ADC 	
 //	PORTC |= (1<<DDC3); //Pull-up
  */
-	DDRC &= ~(1<<DDC3);	//Pin 3 von PORT C als Eingang fuer Tastatur 	
+//	DDRC &= ~(1<<DDC3);	//Pin 3 von PORT C als Eingang fuer Tastatur 	
 //	PORTC |= (1<<DDC3); //Pull-up
 
 
@@ -228,7 +229,12 @@ void timer0 (void)
 	TIFR0 |= (1<<TOV0); 				//Clear TOV0 Timer/Counter Overflow Flag. clear pending interrupts
 	TIMSK0 |= (1<<TOIE0);			//Overflow Interrupt aktivieren
 	TCNT0 = 0x00;					//RŸcksetzen des Timers
-	
+   OCR0A = 100;
+   
+}
+ISR(TIMER0_COMPA_vect) // CTC Timer2
+{
+   //OSZIATOG;
 }
 
 void timer1(void) // Instrument-Anzeige PWM
@@ -451,7 +457,7 @@ int main (void)
    //eeprom_write_byte(&WDT_ErrCount0,0);
    //	uint8_t eepromWDT_Count0=eeprom_read_byte(&WDT_ErrCount0);
    //	uint8_t eepromWDT_Count1=eeprom_read_byte(&WDT_ErrCount1);
-   
+  // timer0();
    timer1();
    timer2();
    InitCurrent();
@@ -462,7 +468,7 @@ int main (void)
     */
    sei();
    uint8_t i=0;
-   
+   DDRD |= (1<<6);
    while (1)
    {
       //Blinkanzeige
@@ -475,16 +481,21 @@ int main (void)
          loopcount1++;
          if ((loopcount1 & 0x0A)==0)
          {
+            //OSZICTOGG;
+            //PORTD ^= (1<<6);
+            
             LOOPLEDPORT ^=(1<<LOOPLED);
             uint8_t t=sekunde & 0x0FF;
             //lcd_gotoxy(16,0);
             //lcd_putint(t);
             
             sekunde++;
+            //lcd_gotoxy(0,3);
+            //lcd_putint12((sekunde));
             /*
              lcd_gotoxy(0,3);
              lcd_puts("I0:\0");
-             t=impulscount & 0xFF;
+             t=totalimpulscount & 0xFF;
              lcd_putint12((t));
              */
             //loopcount1=0;
@@ -523,9 +534,14 @@ int main (void)
             //testwert++;
             
             //currentstatus &= ~(1<<NEWBIT);
-            
+            //lcd_gotoxy(10,3);
+            //lcd_puthex(currentstatus );
+         
             if ((currentstatus & (1<<IMPULSBIT)) && (currentstatus & (1<<COUNTBIT))) // neuer Impuls angekommen, Zaehlung lauft noch, noch nicht genuegend werte
             {
+               lcd_gotoxy(0,3);
+               lcd_putc('b');
+               //lcd_putint(messungcounter);
                //OSZILO;
                inbuffer[0]=0;
                inbuffer[1]=0;
@@ -535,13 +551,16 @@ int main (void)
                //OSZILO;
                //currentstatus++; // ein Wert mehr
                messungcounter ++;
-               //lcd_gotoxy(0,3);
-               //lcd_putint(currentstatus & 0x0F);
+               lcd_putint16(impulszeit);
                impulszeitsumme += (impulszeit/ANZAHLWERTE);      // float, Wert aufsummieren
                
                if (messungcounter >= ANZAHLWERTE)      // genuegend Werte
                {
                   cli(); // Uebertragung nicht stoeren durch INT0
+                  
+                  //lcd_putc('b');
+                  //lcd_putint(messungcounter);
+                  
                   paketcounter++;
                   
                   //outbuffer[0] = testwert;
@@ -555,27 +574,31 @@ int main (void)
                   //impulsmittelwert = 12*impulszeitsumme/8;
                   impulsmittelwert = impulszeitsumme;
                   
+                  //lcd_putint16((uint32_t)impulsmittelwert);
                   // Leistung berechnen
                   
                   if (impulsmittelwert)
                   {
-                     if (F_CPU==8000000)
+                     if (TEST)
                      {
-                        // impulsmittelwert*= 3;
-                        impulsmittelwert/= 4;
+                        lcd_gotoxy(10,3);
+                        lcd_putc('m');
+                        lcd_putint16((uint32_t)impulsmittelwert);
+
                      }
                    //  Impuls vom alten Zaehler entspricht 360 mWh
                   //   leistung =(uint32_t) 360.0/impulsmittelwert*10000.0;// 480us
                      
                      // 1000 imp == 1 kWh
                      // 1 imp = 1 wh = 1000 mWh
-                     leistung =(uint32_t) 1000.0/impulsmittelwert*10000.0;// 480us
+                     // Zeit zwischen Impuls: impulsmittelwert*TIMERINTERVALL (20 * 10^-6)
+                     leistung =(uint32_t) 1000.0/(impulsmittelwert*TIMERINTERVALL)*1000000.0;// 480us
                      
                      // webleistung = (uint32_t)360.0/impulsmittelwert*1000000.0;
                      //webleistung = (uint32_t)360.0/impulsmittelwert*10000.0;
-                     webleistung = (uint32_t)1000.0/impulsmittelwert*10000.0;
+                     webleistung = (uint32_t)1000.0/(impulsmittelwert*TIMERINTERVALL)*1000000.0;
                      
-                     lcd_gotoxy(0,1);
+                     lcd_gotoxy(8,0);
                      lcd_putc('L');
                      lcd_putc(':');
                      // lcd_putint16(leistung);
@@ -590,15 +613,16 @@ int main (void)
                      
                      char*  defstromstring = (char*)trimwhitespace(stromstring);
                      uint8_t l=strlen(defstromstring);
-                     lcd_gotoxy(2,1);
-                     lcd_puts("    ");
-                     lcd_gotoxy(6-l,1);
+                     lcd_gotoxy(10,0);
+                     lcd_puts("        ");
+                     lcd_gotoxy(15-l,0);
                      //lcd_putint16(leistung);
                      lcd_puts(trimwhitespace(defstromstring));
                      lcd_putc('W');
                      
+                     
                   }
-                  wattstunden = impulscount/10; // 310us
+                  wattstunden = totalimpulscount/10; // 310us
                   
                   
                   // timer1 setzen
@@ -626,17 +650,21 @@ int main (void)
                   
                   char mittelwertstring[10];
                   dtostrf(impulsmittelwert,8,0,mittelwertstring);
-                  lcd_gotoxy(8,0);
-                  lcd_puts("     ");
-                  lcd_gotoxy(6,0);
+                  //lcd_gotoxy(10,2);
+                  //lcd_puts("     ");
+                  lcd_gotoxy(0,1);
                   lcd_putc('m');
                   lcd_putc(':');
                   lcd_puts(trimwhitespace(mittelwertstring));
-                  lcd_putc(' ');
-                  lcd_putint12(impulsmittelwert);
-                  lcd_gotoxy(8,1);
-                  if (TEST == 0)
+                  //lcd_putc(' ');
+                  
+                  if (TEST)
                   {
+                     lcd_gotoxy(0,2);
+                     lcd_putc('i');
+                     lcd_putint16(impulsmittelwert);
+                  }
+                  lcd_gotoxy(8,1);
                   lcd_putc('E');
                   lcd_putc(':');
                   lcd_putint(wattstunden/1000);
@@ -644,7 +672,7 @@ int main (void)
                   lcd_putint3(wattstunden);
                   lcd_putc('W');
                   lcd_putc('h');
-                  }
+                  
                   
                   sei();
                   

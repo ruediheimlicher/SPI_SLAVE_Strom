@@ -4,7 +4,7 @@
  
 // current
 volatile static uint32_t             currentcount=0;     // Anzahl steps von timer2 zwischen 2 Impulsen. Schritt 10uS
-volatile uint32_t                    impulscount=0;     // Anzahl Impulse vom Stromzaehler fortlaufend seit startup, Energiezaehler
+volatile uint32_t                    totalimpulscount=0;     // Anzahl Impulse vom Stromzaehler fortlaufend seit startup, Energiezaehler
 
 
 volatile static uint32_t            impulszeit=0;  // anzahl steps in INT1, wird nach div durch ANZAHLWERTE zu impulszeitsumme addiert.uebernommen
@@ -41,7 +41,8 @@ volatile uint16_t messungcounter;
 
 // Endwert fuer Compare-Match von Timer2
 #define TIMER2_ENDWERT12					 136; // 10 us
-#define TIMER2_ENDWERT8					 200; // 10 us
+
+#define TIMER2_ENDWERT8					 220; // 20 us
 
 //#define TIMER2_ENDWERT  250
 
@@ -56,6 +57,7 @@ volatile uint16_t messungcounter;
 
 #define ANZAHLPAKETE                8 // Anzahl Pakete bis zur Uebertragung
 
+#define TIMERINTERVALL              20 // Takt des Zaehlers in ms
 
 // Impulszaehler fuer Zaehlen der Impulse bei hoher frequenz(Leistung). Ev genauer als Zeitmessung zwischen Impulsen
 #define INTERVALL 100000 // 100ms Intervall fuer das Zaehlen der Impulse, 36 mWh
@@ -82,14 +84,14 @@ volatile static uint16_t stromimpulsmittelwertarray[4]={};
 volatile uint8_t stromimpulsindex=0;
 
 
-#define OSZIPORT		PORTB
-#define OSZIPORTDDR	DDRB
-#define OSZIPORTPIN	PINB
-#define PULS			2
+#define OSZICPORT		PORTD
+#define OSZICDDR	DDRD
 
-#define OSZILO OSZIPORT &= ~(1<<PULS)
-#define OSZIHI OSZIPORT |= (1<<PULS)
-#define OSZITOGG OSZIPORT ^= (1<<PULS)
+#define PULSC			7
+
+#define OSZICLO OSZICPORT &= ~(1<<PULSC)
+#define OSZICHI OSZICPORT |= (1<<PULSC)
+#define OSZICTOGG OSZICPORT ^= (1<<PULSC)
 
 #define CURRENTSEND                 0     // Bit fuer: Daten an Server senden
 #define CURRENTSTOP                 1     // Bit fuer: Impulse ignorieren
@@ -192,13 +194,14 @@ void timer2(void) // Takt fuer Strommessung
 ISR(TIMER2_COMPA_vect) // CTC Timer2
 {
    
-   OSZILO;
+   OSZICLO;
    currentcount++; // Zaehlimpuls
    
    //PORTB ^= (1<<0);
    
    // Zeitfenster fuer Impulszaehlung bei hohen Frequenzen 100 ms
    // Zeit messen fuer Intervall
+  /*
    intervallzeit++;
    if (intervallzeit == INTERVALL) // 100ms Messintervall abgelaufen, Anzahl zum schleppenden Mittelwert anfuegen. 
    {
@@ -215,7 +218,8 @@ ISR(TIMER2_COMPA_vect) // CTC Timer2
          webstatus |= (1<<DATALOOP);
       }
    }
-   OSZIHI;
+   */
+   OSZICHI;
 }
 
 // ISR fuer Atmega328
@@ -224,6 +228,17 @@ ISR(TIMER2_COMPA_vect) // CTC Timer2
 
 ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  (vorher 360 mWh)
 {
+   if (TEST)
+   {
+      //lcd_gotoxy(0,2);
+      //lcd_puts("T");
+      //lcd_putint(stromimpulscounter);
+      
+     // webstatus |= (1<<CURRENTWAIT);
+      currentstatus |= (1<<NEWBIT);
+      currentstatus |= (1<<IMPULSBIT);
+      
+   }
    //OSZILO;
    stromimpulscounter++; // Anzahl Impulse der laufenden Messung
    
@@ -238,7 +253,12 @@ ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  
     // In strom_browserresult_callback gesetzt: Uebertragung ist fertig, beim naechsten Impuls Messungen wieder starten
    if (webstatus & (1<<CURRENTWAIT)) // Webevent fertig, neue Serie starten
    {
-      
+      if (TEST)
+      {
+       //  lcd_gotoxy(6,2);
+       //  lcd_putc('i');
+       //  lcd_putint16(currentcount);
+      }
       webstatus &= ~(1<<CURRENTWAIT);
       TCCR2B |= (1<<CS20); // Timer wieder starten, Impuls ist Startimpuls, nicht auswerten
       currentcount =0;
@@ -247,7 +267,7 @@ ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  
       return;
    }
    
-   impulscount++; // Gesamtzahl der Impulse vom Zaehler fortlaufend  seit startup: Energiezaehler
+   totalimpulscount++; // Gesamtzahl der Impulse vom Zaehler fortlaufend  seit startup: Energiezaehler
    
    currentstatus |= (1<<IMPULSBIT);// Abstand bis zum naechsten Impuls messen: Bit bearbeiten in WebServer.
    
@@ -265,6 +285,8 @@ ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  
 
 void InitCurrent(void) // INT1
 { 
+   OSZICDDR |= (1<<PULSC);
+   OSZICPORT |= (1<<PULSC);
     /*
 	// interrupt on INT0 pin falling edge (sensor triggered) 
 	EICRA = (1<<ISC01) | (0<<ISC00);
