@@ -42,7 +42,8 @@ volatile uint16_t messungcounter;
 // Endwert fuer Compare-Match von Timer2
 #define TIMER2_ENDWERT12					 136; // 10 us
 
-#define TIMER2_ENDWERT8					 220; // 20 us
+//#define TIMER2_ENDWERT8					 220; // 20 us
+#define TIMER2_ENDWERT8                109; // 10 us
 
 //#define TIMER2_ENDWERT  250
 
@@ -57,7 +58,7 @@ volatile uint16_t messungcounter;
 
 #define ANZAHLPAKETE                8 // Anzahl Pakete bis zur Uebertragung
 
-#define TIMERINTERVALL              20 // Takt des Zaehlers in ms
+#define TIMERINTERVALL              10 // Takt des Zaehlers in ms
 
 // Impulszaehler fuer Zaehlen der Impulse bei hoher frequenz(Leistung). Ev genauer als Zeitmessung zwischen Impulsen
 #define INTERVALL 100000 // 100ms Intervall fuer das Zaehlen der Impulse, 36 mWh
