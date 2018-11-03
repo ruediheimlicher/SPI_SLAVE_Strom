@@ -54,7 +54,7 @@ volatile uint16_t messungcounter;
 #define NEWBIT                      5  // Gesetzt wenn SPI-Uebertragung fertig. reset wenn anzahlwerte erreicht.
 #define COUNTBIT                    3 // Messung ist im gang, noch nicht ANZAHLWERTE gesammelt
 
-#define ANZAHLWERTE                 8 // Anzahl Werte fuer Mittelwertbildung
+#define ANZAHLWERTE                 2 // Anzahl Werte fuer Mittelwertbildung
 
 #define ANZAHLPAKETE                8 // Anzahl Pakete bis zur Uebertragung
 

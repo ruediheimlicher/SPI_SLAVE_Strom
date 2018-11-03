@@ -102,7 +102,7 @@ float lastleistung =1;
 uint8_t lastcounter=0;
 volatile uint8_t  anzeigewert =0;
 
-static char stromstring[10];
+static char stromstring[16];
 //static char CurrentDataString[64];
 
 // defines fuer BUS-Status
@@ -553,6 +553,8 @@ int main (void)
                messungcounter ++;
                lcd_putint16(impulszeit);
                impulszeitsumme += (impulszeit/ANZAHLWERTE);      // float, Wert aufsummieren
+               lcd_putc(' ');
+               lcd_outint16(impulszeitsumme);
                
                if (messungcounter >= ANZAHLWERTE)      // genuegend Werte
                {
@@ -582,7 +584,7 @@ int main (void)
                      if (TEST)
                      {
                         lcd_gotoxy(10,3);
-                        lcd_putc('m');
+                        //lcd_putc('m');
                         lcd_putint16((uint32_t)impulsmittelwert);
 
                      }
@@ -598,7 +600,7 @@ int main (void)
                      //webleistung = (uint32_t)360.0/impulsmittelwert*10000.0;
                      webleistung = (uint32_t)1000.0/(impulsmittelwert*TIMERINTERVALL)*1000000.0;
                      
-                     lcd_gotoxy(8,0);
+                     lcd_gotoxy(9,0);
                      lcd_putc('L');
                      lcd_putc(':');
                      // lcd_putint16(leistung);
@@ -607,15 +609,16 @@ int main (void)
                      //lcd_putc('W');
                      
                      //void lcd_put_frac(char* string, uint8_t start, uint8_t komma, uint8_t frac)
-                     dtostrf(webleistung,10,0,stromstring); // 800us
-                     
+                     dtostrf(webleistung,10,1,stromstring); // 800us
+                     //lcd_gotoxy(0,2);
+                     //lcd_putint16(impulsmittelwert);
                      // lcd_putc('*');
                      
                      char*  defstromstring = (char*)trimwhitespace(stromstring);
                      uint8_t l=strlen(defstromstring);
-                     lcd_gotoxy(10,0);
+                     lcd_gotoxy(14,0);
                      lcd_puts("        ");
-                     lcd_gotoxy(15-l,0);
+                     lcd_gotoxy(18-l,0);
                      //lcd_putint16(leistung);
                      lcd_puts(trimwhitespace(defstromstring));
                      lcd_putc('W');
@@ -649,12 +652,12 @@ int main (void)
                   
                   
                   char mittelwertstring[10];
-                  dtostrf(impulsmittelwert,8,0,mittelwertstring);
+                  dtostrf(impulsmittelwert,9,0,mittelwertstring);
                   //lcd_gotoxy(10,2);
                   //lcd_puts("     ");
                   lcd_gotoxy(0,1);
                   lcd_putc('m');
-                  lcd_putc(':');
+                  //lcd_putc(':');
                   lcd_puts(trimwhitespace(mittelwertstring));
                   //lcd_putc(' ');
                   
@@ -664,7 +667,7 @@ int main (void)
                      lcd_putc('i');
                      lcd_putint16(impulsmittelwert);
                   }
-                  lcd_gotoxy(8,1);
+                  lcd_gotoxy(9,1);
                   lcd_putc('E');
                   lcd_putc(':');
                   lcd_putint(wattstunden/1000);
@@ -793,7 +796,7 @@ int main (void)
             {
                spi_errcount++;
             }
-            lcd_gotoxy(10,1);
+            lcd_gotoxy(10,2);
             lcd_putc('e');
             lcd_putint(spi_errcount);
             lcd_putc('c');
