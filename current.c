@@ -1,5 +1,5 @@
 //***************************************************************************
-
+#import "defines.h"
 // Im Hauptprogramm einfügen:
  
 // current
@@ -10,8 +10,11 @@ volatile uint32_t                    totalimpulscount=0;     // Anzahl Impulse v
 volatile static uint32_t            impulszeit=0;  // anzahl steps in INT1, wird nach div durch ANZAHLWERTE zu impulszeitsumme addiert.uebernommen
 volatile  uint32_t                  integerimpulszeit=0;  // anzahl steps in INT1, fortlaufend addiert waehrend ANZAHLWERTE
 
-volatile static float               impulszeitsumme=0;
-volatile static float               impulsmittelwert=0; // Mittelwertt der Impulszeiten in einem Messintervall
+//volatile static float               impulszeitsumme=0;
+//volatile static float               impulsmittelwert=0; // Mittelwertt der Impulszeiten in einem Messintervall
+
+volatile static uint32_t               impulszeitsumme=0;
+volatile static uint32_t               impulsmittelwert=0; // Mittelwertt der Impulszeiten in einem Messintervall
 
 // werte fuer SPI
 
@@ -30,17 +33,18 @@ volatile uint8_t                    errstatus =0;     // Byte fuer errors der Me
 volatile uint8_t                    sendWebCount=0;	// Zahler fuer Anzahl TWI-Events,
                                                       // nach denen Daten des Clients gesendet werden sollen
 
+volatile uint16_t          teststartcounter = 0;
+volatile uint16_t          messungcounter = 0;
 
-volatile uint16_t messungcounter;
 
-
-#define TEST   0
+#define TEST   1
+#define SIM   1
 
 #include <avr/io.h>
 #include "lcd.h"
 
 // Endwert fuer Compare-Match von Timer2
-#define TIMER2_ENDWERT12					 136; // 10 us
+#define TIMER2_ENDWERT12					 137; // 100 us
 
 //#define TIMER2_ENDWERT8					 220; // 20 us
 #define TIMER2_ENDWERT8                109; // 10 us
@@ -54,7 +58,7 @@ volatile uint16_t messungcounter;
 #define NEWBIT                      5  // Gesetzt wenn SPI-Uebertragung fertig. reset wenn anzahlwerte erreicht.
 #define COUNTBIT                    3 // Messung ist im gang, noch nicht ANZAHLWERTE gesammelt
 
-#define ANZAHLWERTE                 2 // Anzahl Werte fuer Mittelwertbildung
+#define ANZAHLWERTE                 1 // Anzahl Werte fuer Mittelwertbildung
 
 #define ANZAHLPAKETE                8 // Anzahl Pakete bis zur Uebertragung
 
@@ -196,7 +200,7 @@ ISR(TIMER2_COMPA_vect) // CTC Timer2
 {
    
    OSZICLO;
-   currentcount++; // Zaehlimpuls
+   currentcount++; // Zaehlimpuls 100 kHz 10 uS
    
    //PORTB ^= (1<<0);
    
@@ -229,16 +233,23 @@ ISR(TIMER2_COMPA_vect) // CTC Timer2
 
 ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  (vorher 360 mWh)
 {
+   OSZIALO;
    if (TEST)
    {
+      
       //lcd_gotoxy(0,2);
       //lcd_puts("T");
       //lcd_putint(stromimpulscounter);
       
      // webstatus |= (1<<CURRENTWAIT);
-      currentstatus |= (1<<NEWBIT);
-      currentstatus |= (1<<IMPULSBIT);
-      
+      teststartcounter++;
+      if (teststartcounter > 2) // etwas warten bis neue Messung startet
+      {
+         currentstatus |= (1<<NEWBIT);
+         teststartcounter=0;
+      }
+      //currentstatus |= (1<<IMPULSBIT);
+      //OSZIAHI;
    }
    //OSZILO;
    stromimpulscounter++; // Anzahl Impulse der laufenden Messung
@@ -256,7 +267,7 @@ ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  
    {
       if (TEST)
       {
-       //  lcd_gotoxy(6,2);
+       //  lcd_gotoxy(10,2);
        //  lcd_putc('i');
        //  lcd_putint16(currentcount);
       }
@@ -281,7 +292,7 @@ ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  
       
       //PORTB ^= (1<<IMPULSPIN);
    }
-   //OSZIHI;
+   OSZIAHI;
 }	// ISR
 
 void InitCurrent(void) // INT1

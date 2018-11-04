@@ -486,8 +486,8 @@ int main (void)
             
             LOOPLEDPORT ^=(1<<LOOPLED);
             uint8_t t=sekunde & 0x0FF;
-            //lcd_gotoxy(16,0);
-            //lcd_putint(t);
+           // lcd_gotoxy(16,0);
+           // lcd_putint(t);
             
             sekunde++;
             //lcd_gotoxy(0,3);
@@ -508,18 +508,14 @@ int main (void)
       
       if (currentstatus & (1<<NEWBIT)) // SPI fertig, neue Strommessung anfangen
       {
-         
+         currentstatus &= ~(1<<NEWBIT);
          // schon eine Serie angefangen?
          if (!(currentstatus & (1<<COUNTBIT)))
          {
             messungcounter=0;
             currentstatus |= (1<<COUNTBIT); // neue Messung starten
          }
-         
-         //     inbuffer[0]=0;
-         //     inbuffer[1]=0;
-         //     inbuffer[2]=0;
-         // test ohne current
+          // test ohne current
          //if (TEST)
          {
             //           inbuffer[0]=0;
@@ -536,9 +532,13 @@ int main (void)
             //currentstatus &= ~(1<<NEWBIT);
             //lcd_gotoxy(10,3);
             //lcd_puthex(currentstatus );
-         
+#pragma mark IMPULS        
             if ((currentstatus & (1<<IMPULSBIT)) && (currentstatus & (1<<COUNTBIT))) // neuer Impuls angekommen, Zaehlung lauft noch, noch nicht genuegend werte
             {
+               messungcounter++;
+               lcd_gotoxy(16,2);
+               lcd_putint2(messungcounter);
+
                lcd_gotoxy(0,3);
                lcd_putc('b');
                //lcd_putint(messungcounter);
@@ -550,15 +550,16 @@ int main (void)
                out_startdaten = 0xB1;
                //OSZILO;
                //currentstatus++; // ein Wert mehr
-               messungcounter ++;
-               lcd_putint16(impulszeit);
-               impulszeitsumme += (impulszeit/ANZAHLWERTE);      // float, Wert aufsummieren
-               lcd_putc(' ');
-               lcd_outint16(impulszeitsumme);
                
+               lcd_putint16(impulszeit);
+               impulszeitsumme += impulszeit;      // float, Wert aufsummieren
+               //lcd_putc(' ');
+               //lcd_puts("is");
+               //lcd_putint16(impulszeitsumme);
+           //    impulszeit = 0;
                if (messungcounter >= ANZAHLWERTE)      // genuegend Werte
                {
-                  cli(); // Uebertragung nicht stoeren durch INT0
+    //              cli(); // Uebertragung nicht stoeren durch INT0
                   
                   //lcd_putc('b');
                   //lcd_putint(messungcounter);
@@ -574,18 +575,27 @@ int main (void)
                   
                   // impulsmittelwert uebernehmen
                   //impulsmittelwert = 12*impulszeitsumme/8;
-                  impulsmittelwert = impulszeitsumme;
+                  //cli();
+                  //impulsmittelwert = impulszeitsumme / ANZAHLWERTE;
+                  //sei();
+                  if (TEST)
+                  {
+                     //lcd_gotoxy(10,3);
+                     //lcd_putc('i');
+                     //lcd_putint16(impulsmittelwert);
+                  }
                   
                   //lcd_putint16((uint32_t)impulsmittelwert);
                   // Leistung berechnen
                   
-                  if (impulsmittelwert)
+                  if (impulszeitsumme)
                   {
                      if (TEST)
                      {
-                        lcd_gotoxy(10,3);
-                        //lcd_putc('m');
-                        lcd_putint16((uint32_t)impulsmittelwert);
+                       // lcd_gotoxy(10,3);
+                       // lcd_putc('i');
+                       // lcd_putc('m');
+                       // lcd_putint16((uint32_t)impulsmittelwert);
 
                      }
                    //  Impuls vom alten Zaehler entspricht 360 mWh
@@ -594,22 +604,29 @@ int main (void)
                      // 1000 imp == 1 kWh
                      // 1 imp = 1 wh = 1000 mWh
                      // Zeit zwischen Impuls: impulsmittelwert*TIMERINTERVALL (20 * 10^-6)
-                     leistung =(uint32_t) 1000.0/(impulsmittelwert*TIMERINTERVALL)*1000000.0;// 480us
-                     
+                     cli();
+                     impulsmittelwert = impulszeitsumme / ANZAHLWERTE;
+                     float floatleistung =  1000.0/(impulsmittelwert*TIMERINTERVALL)*100000.0 ; // 480us
+                     leistung = (uint32_t)floatleistung;
+                     //leistung =(uint32_t) 1000.0/(impulsmittelwert*TIMERINTERVALL)*1000000.0;
+                     //lcd_gotoxy(10,3);
+                     //lcd_putint16(leistung);
                      // webleistung = (uint32_t)360.0/impulsmittelwert*1000000.0;
                      //webleistung = (uint32_t)360.0/impulsmittelwert*10000.0;
-                     webleistung = (uint32_t)1000.0/(impulsmittelwert*TIMERINTERVALL)*1000000.0;
-                     
+                     //webleistung = (uint32_t)1000.0/(impulsmittelwert*TIMERINTERVALL)*1000000.0;
+                     sei();
                      lcd_gotoxy(9,0);
                      lcd_putc('L');
                      lcd_putc(':');
+                     lcd_puts("       ");
                      // lcd_putint16(leistung);
                      //lcd_putc(' ');
                      //lcd_putint12(webleistung);
                      //lcd_putc('W');
                      
                      //void lcd_put_frac(char* string, uint8_t start, uint8_t komma, uint8_t frac)
-                     dtostrf(webleistung,10,1,stromstring); // 800us
+                     //dtostrf(webleistung,10,1,stromstring); // 800us
+                     dtostrf(leistung,10,1,stromstring); // 800us
                      //lcd_gotoxy(0,2);
                      //lcd_putint16(impulsmittelwert);
                      // lcd_putc('*');
@@ -652,22 +669,17 @@ int main (void)
                   
                   
                   char mittelwertstring[10];
-                  dtostrf(impulsmittelwert,9,0,mittelwertstring);
+                  dtostrf(impulsmittelwert,7,0,mittelwertstring);
                   //lcd_gotoxy(10,2);
                   //lcd_puts("     ");
                   lcd_gotoxy(0,1);
                   lcd_putc('m');
                   //lcd_putc(':');
-                  lcd_puts(trimwhitespace(mittelwertstring));
+                  trimwhitespace(mittelwertstring);
+                  lcd_puts(mittelwertstring);
                   //lcd_putc(' ');
                   
-                  if (TEST)
-                  {
-                     lcd_gotoxy(0,2);
-                     lcd_putc('i');
-                     lcd_putint16(impulsmittelwert);
-                  }
-                  lcd_gotoxy(9,1);
+                   lcd_gotoxy(9,1);
                   lcd_putc('E');
                   lcd_putc(':');
                   lcd_putint(wattstunden/1000);
@@ -796,11 +808,12 @@ int main (void)
             {
                spi_errcount++;
             }
-            lcd_gotoxy(10,2);
-            lcd_putc('e');
-            lcd_putint(spi_errcount);
-            lcd_putc('c');
-            lcd_putint(SPI_Call_count0);
+            
+            //lcd_gotoxy(10,2);
+            //lcd_putc('e');
+            //lcd_putint(spi_errcount);
+            //lcd_putc('c');
+            //lcd_putint(SPI_Call_count0);
             
             //lcd_gotoxy(16,1);
             //lcd_putint(SendErrCounter);

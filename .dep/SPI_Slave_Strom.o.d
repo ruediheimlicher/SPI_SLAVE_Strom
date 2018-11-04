@@ -20,8 +20,8 @@ SPI_Slave_Strom.o: SPI_Slave_Strom.c \
  /usr/local/CrossPack-AVR-20131216/avr/include/avr/wdt.h \
  /usr/local/CrossPack-AVR-20131216/avr/include/string.h \
  /usr/local/CrossPack-AVR-20131216/avr/include/ctype.h lcd.c lcd.h \
- /usr/local/CrossPack-AVR-20131216/avr/include/stdlib.h current.c adc.c \
- adc.h SPI_slave.c
+ /usr/local/CrossPack-AVR-20131216/avr/include/stdlib.h current.c \
+ defines.h adc.c adc.h SPI_slave.c
 
 /usr/local/CrossPack-AVR-20131216/avr/include/avr/io.h:
 
@@ -72,6 +72,8 @@ lcd.h:
 /usr/local/CrossPack-AVR-20131216/avr/include/stdlib.h:
 
 current.c:
+
+defines.h:
 
 adc.c:
 
