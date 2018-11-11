@@ -23,6 +23,7 @@
 #include "current.c"
 #include "adc.c"
 #include "SPI_slave.c"
+#import "defines.h"
 //***********************************
 //Strom                    *
 //									*
@@ -41,12 +42,6 @@
 
 // Definitionen Slave Strom
 
-
-#define LOOPLEDPORT		PORTB
-#define LOOPLEDDDR		DDRB
-
-// Define fuer Slave:
-#define LOOPLED			0
 
 
 #define TASTE1		38
@@ -101,6 +96,8 @@ volatile float leistung =1;
 float lastleistung =1;
 uint8_t lastcounter=0;
 volatile uint8_t  anzeigewert =0;
+
+volatile uint8_t spitime=0;
 
 static char stromstring[16];
 //static char CurrentDataString[64];
@@ -173,6 +170,8 @@ void SPI_slaveinit(void)
    OSZICDDR |= (1<<PULSC);
    // LED
    LOOPLEDDDR |=(1<<LOOPLED);
+   LOOPLEDDDR |=(1<<INTERRUPT);
+   LOOPLEDPORT |= (1<<INTERRUPT);
 	//LCD
 	LCD_DDR |= (1<<LCD_RSDS_PIN);	//Pin 4 von PORT B als Ausgang fuer LCD
  	LCD_DDR |= (1<<LCD_ENABLE_PIN);	//Pin 5 von PORT B als Ausgang fuer LCD
@@ -224,7 +223,7 @@ void timer0 (void)
 //	TCCR0 |= (1<<CS02);				//8-Bit Timer, Timer clock = system clock/256
 	
 //Timer fuer Servo	
-	TCCR0B |= (1<<CS00)|(1<<CS01);	//Takt /64 Intervall 64 us
+	TCCR0B |= (1<<CS00)|(1<<CS02);	//Takt /1024 Intervall 100 us
 	
 	TIFR0 |= (1<<TOV0); 				//Clear TOV0 Timer/Counter Overflow Flag. clear pending interrupts
 	TIMSK0 |= (1<<TOIE0);			//Overflow Interrupt aktivieren
@@ -232,6 +231,15 @@ void timer0 (void)
    OCR0A = 100;
    
 }
+
+ISR(TIM0_OVF_vect) // ca. 0.25s
+{
+   
+   
+   
+}
+
+
 ISR(TIMER0_COMPA_vect) // CTC Timer2
 {
    //OSZIATOG;
@@ -508,7 +516,7 @@ int main (void)
       
       if (currentstatus & (1<<NEWBIT)) // SPI fertig, neue Strommessung anfangen
       {
-         currentstatus &= ~(1<<NEWBIT);
+         //currentstatus &= ~(1<<NEWBIT);
          // schon eine Serie angefangen?
          if (!(currentstatus & (1<<COUNTBIT)))
          {
@@ -535,6 +543,7 @@ int main (void)
 #pragma mark IMPULS        
             if ((currentstatus & (1<<IMPULSBIT)) && (currentstatus & (1<<COUNTBIT))) // neuer Impuls angekommen, Zaehlung lauft noch, noch nicht genuegend werte
             {
+               LOOPLEDPORT |= (1<<INTERRUPT);
                messungcounter++;
                lcd_gotoxy(16,2);
                lcd_putint2(messungcounter);
@@ -551,7 +560,7 @@ int main (void)
                //OSZILO;
                //currentstatus++; // ein Wert mehr
                
-               lcd_putint16(impulszeit);
+               lcd_putint12(impulszeit);
                impulszeitsumme += impulszeit;      // float, Wert aufsummieren
                //lcd_putc(' ');
                //lcd_puts("is");
@@ -606,7 +615,7 @@ int main (void)
                      // Zeit zwischen Impuls: impulsmittelwert*TIMERINTERVALL (20 * 10^-6)
                      cli();
                      impulsmittelwert = impulszeitsumme / ANZAHLWERTE;
-                     float floatleistung =  1000.0/(impulsmittelwert*TIMERINTERVALL)*100000.0 ; // 480us
+                     float floatleistung =  1000.0/(impulsmittelwert*TIMERINTERVALL)*100000.0 * 3.6 ; // 480us
                      leistung = (uint32_t)floatleistung;
                      //leistung =(uint32_t) 1000.0/(impulsmittelwert*TIMERINTERVALL)*1000000.0;
                      //lcd_gotoxy(10,3);
@@ -641,6 +650,7 @@ int main (void)
                      lcd_putc('W');
                      
                      
+                  
                   }
                   wattstunden = totalimpulscount/10; // 310us
                   
@@ -648,16 +658,22 @@ int main (void)
                   // timer1 setzen
                   
                   //OCR1A = (uint16_t)(impulsmittelwert+0.5); // float to uint16
-                  OCR1A = 4*webleistung;
+                  OCR1A = 4*leistung;
                   // summe resetten
                   impulszeitsumme = 0;
                   
                   messungcounter=0; //
                   
+                  lcd_gotoxy(10,3);
+                  lcd_putc('i');
+                  lcd_putc('m');
+                  lcd_putint12(impulsmittelwert);
+
                   // Daten fuer SPI setzen
-                  outbuffer[0] = ((uint32_t)impulsmittelwert & 0xFF); // L
-                  outbuffer[1] = ((uint32_t)impulsmittelwert>>8) & 0xFF; // H
-                  outbuffer[2] = ((uint32_t)impulsmittelwert>>16) & 0xFF; // HH
+                  outbuffer[0] = (impulsmittelwert & 0xFF); // L
+                  outbuffer[1] = (impulsmittelwert>>8) & 0xFF; // H
+                  outbuffer[2] = (impulsmittelwert>>16) & 0xFF; // HH
+                  
                   
                   // Messung vollstaendig, currentstatus zuruecksetzen
                   currentstatus &= ~(1<<IMPULSBIT);
@@ -669,15 +685,15 @@ int main (void)
                   
                   
                   char mittelwertstring[10];
-                  dtostrf(impulsmittelwert,7,0,mittelwertstring);
+                  dtostrf((float)impulsmittelwert,7,0,mittelwertstring);
                   //lcd_gotoxy(10,2);
                   //lcd_puts("     ");
-                  lcd_gotoxy(0,1);
-                  lcd_putc('m');
+                  //lcd_gotoxy(0,1);
+                  //lcd_putc('m');
                   //lcd_putc(':');
-                  trimwhitespace(mittelwertstring);
-                  lcd_puts(mittelwertstring);
-                  //lcd_putc(' ');
+                  //trimwhitespace(mittelwertstring);
+                  //lcd_puts(mittelwertstring);
+                 // lcd_putc('*');
                   
                    lcd_gotoxy(9,1);
                   lcd_putc('E');
@@ -687,7 +703,7 @@ int main (void)
                   lcd_putint3(wattstunden);
                   lcd_putc('W');
                   lcd_putc('h');
-                  
+                  impulsmittelwert=0;
                   
                   sei();
                   
@@ -726,6 +742,9 @@ int main (void)
       // ***********************
       if (SPI_CONTROL_PORTPIN & (1<< SPI_CONTROL_CS_HC)) // CS ist HI, SPI ist Passiv,
       {
+         lcd_gotoxy(19,3);
+         lcd_putc(' ');
+
          // ***********************
          /*
           Eine Uebertragung hat stattgefunden.
@@ -773,6 +792,7 @@ int main (void)
             testwert++;
             if (TEST)
             {
+               /*
                lcd_gotoxy(0,2);
                lcd_puts("oM \0");
                //lcd_putc('*');
@@ -799,7 +819,7 @@ int main (void)
                lcd_putint(inbuffer[1]);
                lcd_putc(' ');
                lcd_putint(inbuffer[2]);
-               
+               */
                
                
             }
@@ -1002,7 +1022,8 @@ int main (void)
              */
             
             // Strom neu messen
-            
+            lcd_gotoxy(19,2);
+            lcd_putc('n');
             currentstatus |= (1<<NEWBIT); // SPI fertig, neue Strommessung initiieren
             
             
@@ -1022,6 +1043,7 @@ int main (void)
       {
          if (!(spistatus & (1<<ACTIVE_BIT))) // CS ist neu aktiv (LO) geworden, Active-Bit 0 ist noch nicht gesetzt
          {
+            spitime = 0; //zeit fuer Uebertragung zuruecksetzen
             
             if (messungcounter && (messungcounter < ANZAHLWERTE)) // aktuelle Messung begonnen, aber noch nicht fertig, aufrŠumen
             {
@@ -1085,7 +1107,7 @@ int main (void)
             // Anzeige, das  rxdata vorhanden ist
             lcd_gotoxy(19,0);
             lcd_putc('$');
-            lcd_gotoxy(19,3);
+            lcd_gotoxy(19,2);
             lcd_putc(' ');
 
             //lcd_clr_line(0);

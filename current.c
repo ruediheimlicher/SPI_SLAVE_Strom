@@ -37,7 +37,7 @@ volatile uint16_t          teststartcounter = 0;
 volatile uint16_t          messungcounter = 0;
 
 
-#define TEST   1
+
 #define SIM   1
 
 #include <avr/io.h>
@@ -68,7 +68,7 @@ volatile uint16_t          messungcounter = 0;
 #define INTERVALL 100000 // 100ms Intervall fuer das Zaehlen der Impulse, 36 mWh
 // 
 
-volatile static uint32_t intervallzeit=0; // in ISR von timer2 gezaehlt
+volatile static uint16_t intervallzeit=0; // in ISR von timer2 gezaehlt
 
 
 volatile static uint32_t sendintervallzeit=0; // in ISR  gezaehlt, Intervall fuer Send Data
@@ -202,6 +202,12 @@ ISR(TIMER2_COMPA_vect) // CTC Timer2
    OSZICLO;
    currentcount++; // Zaehlimpuls 100 kHz 10 uS
    
+   intervallzeit++;
+   if (intervallzeit == INTERVALL) // 100ms Messintervall abgelaufen, Anzahl zum schleppenden Mittelwert anfuegen. 
+   {
+      intervallzeit = 0;
+      spitime++;
+   }
    //PORTB ^= (1<<0);
    
    // Zeitfenster fuer Impulszaehlung bei hohen Frequenzen 100 ms
@@ -233,6 +239,8 @@ ISR(TIMER2_COMPA_vect) // CTC Timer2
 
 ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  (vorher 360 mWh)
 {
+   
+   LOOPLEDPORT &= ~(1<<INTERRUPT);
    OSZIALO;
    if (TEST)
    {
