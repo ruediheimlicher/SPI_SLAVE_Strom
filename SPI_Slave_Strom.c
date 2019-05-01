@@ -97,6 +97,8 @@ float lastleistung =1;
 uint8_t lastcounter=0;
 volatile uint8_t  anzeigewert =0;
 
+volatile uint8_t spitime=0;
+
 static char stromstring[16];
 //static char CurrentDataString[64];
 
@@ -221,7 +223,7 @@ void timer0 (void)
 //	TCCR0 |= (1<<CS02);				//8-Bit Timer, Timer clock = system clock/256
 	
 //Timer fuer Servo	
-	TCCR0B |= (1<<CS00)|(1<<CS01);	//Takt /64 Intervall 64 us
+	TCCR0B |= (1<<CS00)|(1<<CS02);	//Takt /1024 Intervall 100 us
 	
 	TIFR0 |= (1<<TOV0); 				//Clear TOV0 Timer/Counter Overflow Flag. clear pending interrupts
 	TIMSK0 |= (1<<TOIE0);			//Overflow Interrupt aktivieren
@@ -229,6 +231,15 @@ void timer0 (void)
    OCR0A = 100;
    
 }
+
+ISR(TIM0_OVF_vect) // ca. 0.25s
+{
+   
+   
+   
+}
+
+
 ISR(TIMER0_COMPA_vect) // CTC Timer2
 {
    //OSZIATOG;
@@ -647,7 +658,7 @@ int main (void)
                   // timer1 setzen
                   
                   //OCR1A = (uint16_t)(impulsmittelwert+0.5); // float to uint16
-                  OCR1A = 4*webleistung;
+                  OCR1A = 4*leistung;
                   // summe resetten
                   impulszeitsumme = 0;
                   
@@ -1032,6 +1043,7 @@ int main (void)
       {
          if (!(spistatus & (1<<ACTIVE_BIT))) // CS ist neu aktiv (LO) geworden, Active-Bit 0 ist noch nicht gesetzt
          {
+            spitime = 0; //zeit fuer Uebertragung zuruecksetzen
             
             if (messungcounter && (messungcounter < ANZAHLWERTE)) // aktuelle Messung begonnen, aber noch nicht fertig, aufrŠumen
             {

@@ -68,7 +68,7 @@ volatile uint16_t          messungcounter = 0;
 #define INTERVALL 100000 // 100ms Intervall fuer das Zaehlen der Impulse, 36 mWh
 // 
 
-volatile static uint32_t intervallzeit=0; // in ISR von timer2 gezaehlt
+volatile static uint16_t intervallzeit=0; // in ISR von timer2 gezaehlt
 
 
 volatile static uint32_t sendintervallzeit=0; // in ISR  gezaehlt, Intervall fuer Send Data
@@ -109,7 +109,7 @@ volatile uint8_t stromimpulsindex=0;
 #define  CALLBACKERR                0
 
 //volatile uint8_t timer2startwert=TIMER2_ENDWERT;
-
+extern volatile uint8_t spitime;
 
 #define DATALOOP                    7     // wird von loopcount1 gesetzt, startet senden
 
@@ -202,6 +202,12 @@ ISR(TIMER2_COMPA_vect) // CTC Timer2
    OSZICLO;
    currentcount++; // Zaehlimpuls 100 kHz 10 uS
    
+   intervallzeit++;
+   if (intervallzeit == INTERVALL) // 100ms Messintervall abgelaufen, Anzahl zum schleppenden Mittelwert anfuegen. 
+   {
+      intervallzeit = 0;
+      spitime++;
+   }
    //PORTB ^= (1<<0);
    
    // Zeitfenster fuer Impulszaehlung bei hohen Frequenzen 100 ms
