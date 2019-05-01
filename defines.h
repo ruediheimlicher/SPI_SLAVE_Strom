@@ -1,4 +1,8 @@
-//version.c#define VERSION "80.1"// OSZI
+//version.c
+#define VERSION "80.1"
+
+#define TEST   0
+// OSZI
 #ifndef OSZIAPORT
 #define OSZIAPORT PORTD
 #endif
@@ -19,3 +23,10 @@
 #ifndef OSZIATOG
 #define OSZIATOG OSZIAPORT ^= (1<<PULSA)
 #endif
+
+#define LOOPLEDPORT      PORTB
+#define LOOPLEDDDR      DDRB
+
+// Define fuer Slave:
+#define LOOPLED         0
+#define  INTERRUPT   1

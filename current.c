@@ -37,7 +37,7 @@ volatile uint16_t          teststartcounter = 0;
 volatile uint16_t          messungcounter = 0;
 
 
-#define TEST   1
+
 #define SIM   1
 
 #include <avr/io.h>
@@ -233,6 +233,7 @@ ISR(TIMER2_COMPA_vect) // CTC Timer2
 
 ISR(INT1_vect) // Neuer Impuls vom Zaehler ist angekommen. Entspricht 1000 mWh  (vorher 360 mWh)
 {
+   LOOPLEDPORT &= ~(1<<INTERRUPT);
    OSZIALO;
    if (TEST)
    {
